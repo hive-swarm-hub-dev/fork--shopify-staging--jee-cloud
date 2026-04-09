@@ -6,6 +6,12 @@ module Liquid
     UNIX_TIMESTAMP_REGEX = /\A\d+\z/
 
     def self.slice_collection(collection, from, to)
+      # Short-circuit nil collections to a shared frozen empty array. Many
+      # templates iterate over optional fields ({% for x in maybe %}) where
+      # maybe resolves to nil — every such call previously allocated a fresh
+      # `[]` here.
+      return Const::EMPTY_ARRAY if collection.nil?
+
       if (from != 0 || !to.nil?) && collection.respond_to?(:load_slice)
         collection.load_slice(from, to)
       elsif from == 0 && to.nil? && collection.is_a?(Array)
@@ -17,14 +23,14 @@ module Liquid
     end
 
     def self.slice_collection_using_each(collection, from, to)
-      segments = []
-      index    = 0
-
       # Maintains Ruby 1.8.7 String#each behaviour on 1.9
       if collection.is_a?(String)
-        return collection.empty? ? [] : [collection]
+        return collection.empty? ? Const::EMPTY_ARRAY : [collection]
       end
-      return [] unless collection.respond_to?(:each)
+      return Const::EMPTY_ARRAY unless collection.respond_to?(:each)
+
+      segments = []
+      index    = 0
 
       collection.each do |item|
         if to && to <= index

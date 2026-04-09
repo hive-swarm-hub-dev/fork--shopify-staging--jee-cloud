@@ -185,7 +185,9 @@ module Liquid
       end
 
       segment = Utils.slice_collection(collection, from, to)
-      segment.reverse! if @reversed
+      # slice_collection may return a shared frozen empty array for nil/empty
+      # collections — avoid mutating it.
+      segment.reverse! if @reversed && !segment.empty?
 
       offsets[@name] = from + segment.length
 
