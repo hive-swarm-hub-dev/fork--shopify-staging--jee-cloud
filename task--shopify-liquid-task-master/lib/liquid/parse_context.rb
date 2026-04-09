@@ -17,7 +17,10 @@ module Liquid
       @string_scanner = StringScanner.new("")
 
       @expression_cache = if options[:expression_cache].nil?
-        {}
+        # Reuse the environment-level cache so that parsed expressions
+        # (VariableLookups, literals, ranges) are shared across all templates
+        # parsed with the same environment, rather than re-allocated per-Template.
+        @environment.expression_cache
       elsif options[:expression_cache].respond_to?(:[]) && options[:expression_cache].respond_to?(:[]=)
         options[:expression_cache]
       elsif options[:expression_cache]

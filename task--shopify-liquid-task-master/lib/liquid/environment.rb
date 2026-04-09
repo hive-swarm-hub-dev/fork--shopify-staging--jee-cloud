@@ -26,6 +26,12 @@ module Liquid
     # template can consume.
     attr_accessor :default_resource_limits
 
+    # A shared expression-parse cache used by ParseContexts that don't supply
+    # their own. Lives on the Environment instance (not class-level state) so
+    # that parse caches accumulate across all templates rendered with the same
+    # environment, instead of starting empty for every new ParseContext.
+    attr_reader :expression_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -83,6 +89,7 @@ module Liquid
       @file_system = BlankFileSystem.new
       @default_resource_limits = Const::EMPTY_HASH
       @strainer_template_class_cache = {}
+      @expression_cache = {}
     end
 
     # Registers a new tag with the environment.
