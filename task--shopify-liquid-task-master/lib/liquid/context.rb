@@ -14,7 +14,20 @@ module Liquid
   #
   #   context['bob']  #=> nil  class Context
   class Context
-    attr_reader :scopes, :errors, :registers, :environments, :resource_limits, :static_registers, :static_environments
+    attr_reader :scopes, :registers, :environments, :resource_limits, :static_registers, :static_environments
+
+    # @errors is lazy-initialized on first access. Most renders never produce
+    # an error, so leaving it as nil avoids a per-Context array allocation.
+    def errors
+      @errors ||= []
+    end
+
+    # Read @errors without materializing. Returns nil when no errors have been
+    # recorded — used by Template to copy state out of Context after a render
+    # without forcing the lazy-init when the common no-error path was taken.
+    def peek_errors
+      @errors
+    end
     attr_accessor :exception_renderer, :template_name, :partial, :global_filter, :strict_variables, :strict_filters, :environment
 
     # rubocop:disable Metrics/ParameterLists
@@ -35,7 +48,7 @@ module Liquid
       end
       @scopes              = [outer_scope || {}]
       @registers           = registers.is_a?(Registers) ? registers : Registers.new(registers)
-      @errors              = []
+      @errors              = nil
       @partial             = false
       @strict_variables    = false
       @resource_limits     = resource_limits || ResourceLimits.new(environment.default_resource_limits)

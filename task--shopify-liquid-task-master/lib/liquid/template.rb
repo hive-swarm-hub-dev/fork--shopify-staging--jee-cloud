@@ -196,7 +196,10 @@ module Liquid
       rescue Liquid::MemoryError => e
         context.handle_error(e)
       ensure
-        @errors = context.errors
+        # peek_errors returns nil when no errors were recorded, avoiding the
+        # lazy-init of context's @errors on the common success path. Template's
+        # own #errors method is already lazy.
+        @errors = context.peek_errors
       end
     end
 
