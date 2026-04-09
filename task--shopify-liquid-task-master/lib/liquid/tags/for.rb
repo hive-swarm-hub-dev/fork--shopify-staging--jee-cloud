@@ -198,28 +198,26 @@ module Liquid
       for_stack = context.registers[:for_stack] ||= []
       length    = segment.length
 
-      context.stack do
-        loop_vars = Liquid::ForloopDrop.new(@name, length, for_stack[-1])
+      loop_vars = Liquid::ForloopDrop.new(@name, length, for_stack[-1])
+      for_stack.push(loop_vars)
 
-        for_stack.push(loop_vars)
+      scope = { 'forloop' => loop_vars }
+      context.push(scope)
+      begin
+        segment.each do |item|
+          scope[@variable_name] = item
+          @for_block.render_to_output_buffer(context, output)
+          loop_vars.increment!
 
-        begin
-          context['forloop'] = loop_vars
-
-          segment.each do |item|
-            context[@variable_name] = item
-            @for_block.render_to_output_buffer(context, output)
-            loop_vars.increment!
-
-            # Handle any interrupts if they exist.
-            next unless context.interrupt?
-            interrupt = context.pop_interrupt
-            break if interrupt.is_a?(BreakInterrupt)
-            next if interrupt.is_a?(ContinueInterrupt)
-          end
-        ensure
-          for_stack.pop
+          # Handle any interrupts if they exist.
+          next unless context.interrupt?
+          interrupt = context.pop_interrupt
+          break if interrupt.is_a?(BreakInterrupt)
+          next if interrupt.is_a?(ContinueInterrupt)
         end
+      ensure
+        for_stack.pop
+        context.pop
       end
 
       output
