@@ -97,8 +97,18 @@ module Liquid
     end
 
     def lax_parse(markup)
+      error_mode = @parse_context.error_mode
+      lax = error_mode != :strict && error_mode != :strict2 && error_mode != :rigid
+      if lax
+        cache = @parse_context.environment.case_left_cache
+        if cache.key?(markup)
+          @left = cache[markup]
+          return
+        end
+      end
       if markup =~ Syntax
         @left = parse_expression(Regexp.last_match(1))
+        cache[markup] = @left if lax
       else
         raise SyntaxError, options[:locale].t("errors.syntax.case")
       end

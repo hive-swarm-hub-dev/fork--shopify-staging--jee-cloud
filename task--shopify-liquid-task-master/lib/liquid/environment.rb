@@ -77,6 +77,13 @@ module Liquid
     # cache only the immutable components and recreate the wrapper each time.
     attr_reader :simple_condition_cache
 
+    # Cache for the parsed @left expression of `{% case %}` markups, lax mode.
+    attr_reader :case_left_cache
+
+    # Cache for `{% tablerow %}` parsed markup state — frozen tuple of
+    # [variable_name, collection_name, attributes].
+    attr_reader :table_row_parse_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -143,6 +150,8 @@ module Liquid
       @variable_instance_cache = {}
       @nonblock_tag_instance_cache = {}
       @simple_condition_cache = {}
+      @case_left_cache = {}
+      @table_row_parse_cache = {}
     end
 
     # Registers a new tag with the environment.

@@ -67,6 +67,15 @@ module Liquid
     end
 
     def lax_parse(markup)
+      error_mode = @parse_context.error_mode
+      lax = error_mode != :strict && error_mode != :strict2 && error_mode != :rigid
+      if lax
+        cache = @parse_context.environment.table_row_parse_cache
+        if (cached = cache[markup])
+          @variable_name, @collection_name, @attributes = cached
+          return
+        end
+      end
       if markup =~ Syntax
         @variable_name   = Regexp.last_match(1)
         @collection_name = parse_expression(Regexp.last_match(2))
@@ -74,6 +83,7 @@ module Liquid
         markup.scan(TagAttributes) do |key, value|
           @attributes[key] = parse_expression(value)
         end
+        cache[markup] = [@variable_name, @collection_name, @attributes].freeze if lax
       else
         raise SyntaxError, options[:locale].t("errors.syntax.table_row")
       end
