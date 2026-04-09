@@ -55,8 +55,7 @@ module Liquid
       blocks = @blocks
       while idx < blocks.length
         block = blocks[idx]
-        result = block.evaluate(context)
-        result = result.to_liquid_value if result.respond_to?(:to_liquid_value)
+        result = Liquid::Utils.to_liquid_value(block.evaluate(context))
 
         if result
           return block.attachment.render_to_output_buffer(context, output)
