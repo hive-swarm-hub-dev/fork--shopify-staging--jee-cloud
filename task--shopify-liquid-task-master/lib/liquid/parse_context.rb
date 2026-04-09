@@ -28,8 +28,9 @@ module Liquid
 
     def initialize(options = Const::EMPTY_HASH)
       @environment = options.fetch(:environment, Environment.default)
-      @template_options = options ? options.dup : {}
-
+      # Avoid dup when possible: if options is not frozen, mutate in place.
+      # If frozen (e.g. Const::EMPTY_HASH), create a new hash.
+      @template_options = options.frozen? ? options.dup : options
       @locale   = @template_options[:locale] ||= DEFAULT_LOCALE_INSTANCE
       @warnings = nil
 
