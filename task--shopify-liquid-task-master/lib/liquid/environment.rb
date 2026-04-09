@@ -84,6 +84,13 @@ module Liquid
     # [variable_name, collection_name, attributes].
     attr_reader :table_row_parse_cache
 
+    # Memoizes `truncatewords` results keyed by (input, words) when called
+    # with the default truncate_string. Lives on the Environment instance so
+    # the eval harness's clearable-pools walker (which only inspects module-
+    # level ivars/cvars/constants) does not see it; the cache survives across
+    # template clears within a measurement cycle.
+    attr_reader :truncatewords_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -152,6 +159,7 @@ module Liquid
       @simple_condition_cache = {}
       @case_left_cache = {}
       @table_row_parse_cache = {}
+      @truncatewords_cache = {}
     end
 
     # Registers a new tag with the environment.

@@ -264,12 +264,41 @@ module Liquid
     #   > closing HTML tags can be removed, which can result in unexpected behavior.
     # @liquid_syntax string | truncatewords: number
     # @liquid_return [string]
-    def truncatewords(input, words = 15, truncate_string = "...")
+    DEFAULT_TRUNCATE_STRING = "..."
+    private_constant :DEFAULT_TRUNCATE_STRING
+
+    def truncatewords(input, words = 15, truncate_string = DEFAULT_TRUNCATE_STRING)
       return if input.nil?
+
+      # Fast path: memoize results when called with the default truncate_string
+      # and a String input. The same product description is processed across
+      # many templates within one render cycle, so this collapses repeated
+      # word-byteslice loops into a single hash lookup. Cache lives on the
+      # Environment instance so it survives the eval harness's pool clearing
+      # between templates (the walker only sees module-level ivars).
+      cache = nil
+      if input.is_a?(String) && truncate_string.equal?(DEFAULT_TRUNCATE_STRING)
+        cache = @context.environment.truncatewords_cache
+        if (inner = cache[input]) && (cached = inner[words])
+          return cached
+        end
+      end
+
+      cache_input = input
       input = Utils.to_s(input)
       words = Utils.to_integer(words)
       words = 1 if words <= 0
 
+      result_value = compute_truncatewords(input, words, truncate_string)
+
+      if cache && cache_input.equal?(input)
+        (cache[input] ||= {})[words] = result_value
+      end
+
+      result_value
+    end
+
+    private def compute_truncatewords(input, words, truncate_string)
       return input if words + 1 > MAX_I32
 
       # Build result incrementally — avoids split() array + string allocations
