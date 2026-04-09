@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'set'
-
 module Liquid
   # StrainerTemplate is the computed class for the filters system.
   # New filters are mixed into the strainer class which is then instantiated for each liquid template render run.
@@ -24,11 +22,11 @@ module Liquid
 
         include(filter)
 
-        filter_methods.merge(filter.public_instance_methods.map(&:to_s))
+        filter.public_instance_methods.each { |m| filter_methods[m.to_s] = true }
       end
 
       def invokable?(method)
-        filter_methods.include?(method.is_a?(String) ? method : method.to_s)
+        filter_methods.key?(method.is_a?(String) ? method : method.to_s)
       end
 
       def inherited(subclass)
@@ -37,13 +35,13 @@ module Liquid
       end
 
       def filter_method_names
-        filter_methods.map(&:to_s).to_a
+        filter_methods.keys
       end
 
       private
 
       def filter_methods
-        @filter_methods ||= Set.new
+        @filter_methods ||= {}
       end
     end
 

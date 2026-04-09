@@ -31,7 +31,7 @@ module Liquid
 
     disable_tags "include"
 
-    attr_reader :template_name_expr, :variable_name_expr, :attributes, :alias_name
+    attr_reader :template_name_expr, :variable_name_expr, :attributes, :alias_name, :context_variable_name
 
     def initialize(tag_name, markup, options)
       super
@@ -47,7 +47,6 @@ module Liquid
     end
 
     def render_tag(context, output)
-      # The expression should be a String literal, which parses to a String object
       template_name = @template_name_expr
       raise ::ArgumentError unless template_name.is_a?(String)
 
@@ -57,28 +56,34 @@ module Liquid
         parse_context: parse_context,
       )
 
-      context_variable_name = @alias_name || template_name.split('/').last
-
-      render_partial_func = ->(var, forloop) {
-        inner_context               = context.new_isolated_subcontext
-        inner_context.template_name = partial.name
-        inner_context.partial       = true
-        inner_context['forloop']    = forloop if forloop
-
-        @attributes.each do |key, value|
-          inner_context[key] = context.evaluate(value)
-        end
-        inner_context[context_variable_name] = var unless var.nil?
-        partial.render_to_output_buffer(inner_context, output)
-        forloop&.increment!
-      }
+      context_variable_name = @context_variable_name || template_name.split('/').last
 
       variable = @variable_name_expr ? context.evaluate(@variable_name_expr) : nil
       if @is_for_loop && variable.respond_to?(:each) && variable.respond_to?(:count)
         forloop = Liquid::ForloopDrop.new(template_name, variable.count, nil)
-        variable.each { |var| render_partial_func.call(var, forloop) }
+        variable.each do |var|
+          inner_context               = context.new_isolated_subcontext
+          inner_context.template_name = partial.name
+          inner_context.partial       = true
+          inner_context['forloop']    = forloop
+
+          @attributes.each do |key, value|
+            inner_context[key] = context.evaluate(value)
+          end
+          inner_context[context_variable_name] = var unless var.nil?
+          partial.render_to_output_buffer(inner_context, output)
+          forloop.increment!
+        end
       else
-        render_partial_func.call(variable, nil)
+        inner_context               = context.new_isolated_subcontext
+        inner_context.template_name = partial.name
+        inner_context.partial       = true
+
+        @attributes.each do |key, value|
+          inner_context[key] = context.evaluate(value)
+        end
+        inner_context[context_variable_name] = variable unless variable.nil?
+        partial.render_to_output_buffer(inner_context, output)
       end
 
       output
@@ -93,6 +98,7 @@ module Liquid
       @variable_name_expr = safe_parse_expression(p) if with_or_for
       @alias_name         = p.consume(:id) if p.id?("as")
       @is_for_loop        = (with_or_for == FOR)
+      @context_variable_name = @alias_name || @template_name_expr.split('/').last if @template_name_expr.is_a?(String)
 
       p.consume?(:comma)
 
@@ -126,6 +132,7 @@ module Liquid
       @variable_name_expr = variable_name ? parse_expression(variable_name) : nil
       @template_name_expr = parse_expression(template_name)
       @is_for_loop = (with_or_for == FOR)
+      @context_variable_name = @alias_name || @template_name_expr.split('/').last if @template_name_expr.is_a?(String)
 
       @attributes = {}
       markup.scan(TagAttributes) do |key, value|

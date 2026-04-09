@@ -20,7 +20,6 @@ module Liquid
   # @liquid_syntax_keyword expression The expression to render unless the condition is met.
   class Unless < If
     def render_to_output_buffer(context, output)
-      # First condition is interpreted backwards ( if not )
       first_block = @blocks.first
       result = Liquid::Utils.to_liquid_value(
         first_block.evaluate(context),
@@ -30,8 +29,10 @@ module Liquid
         return first_block.attachment.render_to_output_buffer(context, output)
       end
 
-      # After the first condition unless works just like if
-      @blocks[1..-1].each do |block|
+      idx = 1
+      len = @blocks.length
+      while idx < len
+        block = @blocks[idx]
         result = Liquid::Utils.to_liquid_value(
           block.evaluate(context),
         )
@@ -39,6 +40,7 @@ module Liquid
         if result
           return block.attachment.render_to_output_buffer(context, output)
         end
+        idx += 1
       end
 
       output
