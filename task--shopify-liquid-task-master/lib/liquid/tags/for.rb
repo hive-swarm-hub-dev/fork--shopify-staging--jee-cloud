@@ -32,7 +32,16 @@ module Liquid
     def initialize(tag_name, markup, options)
       super
       @from = @limit = nil
-      parse_with_selected_parser(markup)
+      # Cache the markup-parse state by markup string in lax/warn modes.
+      error_mode = @parse_context.error_mode
+      lax = error_mode != :strict && error_mode != :strict2 && error_mode != :rigid
+      cache = lax ? @parse_context.environment.for_parse_cache : nil
+      if cache && (cached = cache[markup])
+        @variable_name, @collection_name, @reversed, @name, @from, @limit = cached
+      else
+        parse_with_selected_parser(markup)
+        cache[markup] = [@variable_name, @collection_name, @reversed, @name, @from, @limit].freeze if cache
+      end
       @for_block = new_body
       @else_block = nil
     end

@@ -29,9 +29,22 @@ module Liquid
 
     def initialize(tag_name, markup, parse_context)
       super
+      # Cache the parsed (to, from) tuple by markup, but only in lax/warn modes
+      # so we don't perturb strict-mode tests that introspect parse-time state.
+      error_mode = parse_context.error_mode
+      lax = error_mode != :strict && error_mode != :strict2 && error_mode != :rigid
+      if lax
+        cache = parse_context.environment.assign_parse_cache
+        if (cached = cache[markup])
+          @to = cached[0]
+          @from = cached[1]
+          return
+        end
+      end
       if markup =~ Syntax
         @to   = Regexp.last_match(1)
         @from = Variable.new(Regexp.last_match(2), parse_context)
+        cache[markup] = [@to, @from].freeze if lax
       else
         self.class.raise_syntax_error(parse_context)
       end

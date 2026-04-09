@@ -47,6 +47,18 @@ module Liquid
     # tag tokens skip the byte walk in Cursor#parse_tag_token.
     attr_reader :tag_token_parse_cache
 
+    # Cache for the `{% assign %}` tag's parsed `[to, from]` tuple, keyed by
+    # the assign markup (e.g. "foo = bar | upcase"). The Variable on the rhs
+    # is shared across instances; this is safe because Variable's render path
+    # doesn't touch parse_context, only the parse path does.
+    attr_reader :assign_parse_cache
+
+    # Cache for the `{% for %}` tag's parsed-markup state, keyed by the for
+    # markup (e.g. "product in products limit:10"). Stores a frozen tuple of
+    # the byte-level parser's outputs so each For instance can copy the values
+    # without re-walking the markup.
+    attr_reader :for_parse_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -108,6 +120,8 @@ module Liquid
       @variable_parse_cache = {}
       @variable_token_markup_cache = {}
       @tag_token_parse_cache = {}
+      @assign_parse_cache = {}
+      @for_parse_cache = {}
     end
 
     # Registers a new tag with the environment.
