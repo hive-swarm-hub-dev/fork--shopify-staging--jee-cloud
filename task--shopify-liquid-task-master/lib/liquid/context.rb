@@ -247,14 +247,22 @@ module Liquid
         # Only one scope and key not found — go straight to environments
         variable = try_variable_find_in_environments(key, raise_on_not_found: raise_on_not_found)
       else
-        # Multiple scopes — search through all of them
-        index = @scopes.find_index { |s| s.key?(key) }
-
-        variable = if index
-          lookup_and_evaluate(@scopes[index], key, raise_on_not_found: raise_on_not_found)
-        else
-          try_variable_find_in_environments(key, raise_on_not_found: raise_on_not_found)
+        # Multiple scopes — search through all of them with manual loop
+        # (avoids block allocation from find_index)
+        variable = nil
+        found = false
+        i = 1
+        len = @scopes.length
+        while i < len
+          s = @scopes[i]
+          if s.key?(key)
+            variable = lookup_and_evaluate(s, key, raise_on_not_found: raise_on_not_found)
+            found = true
+            break
+          end
+          i += 1
         end
+        variable = try_variable_find_in_environments(key, raise_on_not_found: raise_on_not_found) unless found
       end
 
       # update variable's context before invoking #to_liquid
