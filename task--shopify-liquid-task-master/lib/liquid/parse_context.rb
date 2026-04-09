@@ -2,6 +2,9 @@
 
 module Liquid
   class ParseContext
+    # Shared default locale instance — avoids allocating a new I18n per parse.
+    DEFAULT_LOCALE_INSTANCE = I18n.new
+
     attr_accessor :locale, :line_number, :trim_whitespace, :depth
     attr_reader :partial, :error_mode, :environment, :expression_cache, :string_scanner, :cursor
 
@@ -27,7 +30,7 @@ module Liquid
       @environment = options.fetch(:environment, Environment.default)
       @template_options = options ? options.dup : {}
 
-      @locale   = @template_options[:locale] ||= I18n.new
+      @locale   = @template_options[:locale] ||= DEFAULT_LOCALE_INSTANCE
       @warnings = nil
 
       # constructing new StringScanner in Lexer, Tokenizer, etc is expensive
