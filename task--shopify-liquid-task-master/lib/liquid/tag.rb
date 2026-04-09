@@ -11,6 +11,25 @@ module Liquid
 
     class << self
       def parse(tag_name, markup, tokenizer, parse_context)
+        # Non-block tag instance cache. Non-block tags consume no body during
+        # parse, so their entire state is determined by markup. In lax/warn
+        # modes we share instances across templates via a per-Environment hash.
+        # Block subclasses bypass this because they each carry per-template body
+        # state in @nodelist (and the body itself differs across templates).
+        if !(self < Block)
+          error_mode = parse_context.error_mode
+          if error_mode != :strict && error_mode != :strict2 && error_mode != :rigid
+            cache = parse_context.environment.nonblock_tag_instance_cache
+            key = [self, markup]
+            cached = cache[key]
+            return cached if cached
+            warnings_before = parse_context.warnings.size
+            tag = new(tag_name, markup, parse_context)
+            tag.parse(tokenizer)
+            cache[key] = tag if parse_context.warnings.size == warnings_before
+            return tag
+          end
+        end
         tag = new(tag_name, markup, parse_context)
         tag.parse(tokenizer)
         tag

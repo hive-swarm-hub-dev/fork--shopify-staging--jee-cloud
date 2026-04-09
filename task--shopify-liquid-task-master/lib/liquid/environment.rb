@@ -66,6 +66,11 @@ module Liquid
     # which is fine for rendering but means strict-mode tests must bypass this.
     attr_reader :variable_instance_cache
 
+    # Cache of non-block Tag instances, keyed by [Tag class, markup]. Non-block
+    # tags consume no body during parse, so their state depends only on markup
+    # and they can be shared across templates in lax/warn modes.
+    attr_reader :nonblock_tag_instance_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -130,6 +135,7 @@ module Liquid
       @assign_parse_cache = {}
       @for_parse_cache = {}
       @variable_instance_cache = {}
+      @nonblock_tag_instance_cache = {}
     end
 
     # Registers a new tag with the environment.
