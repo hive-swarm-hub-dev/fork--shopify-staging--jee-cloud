@@ -283,15 +283,34 @@ module Liquid
     def create_variable(token, parse_context)
       len = token.bytesize
       if len >= 4 && token.getbyte(len - 1) == CLOSE_CURLEY_BYTE && token.getbyte(len - 2) == CLOSE_CURLEY_BYTE
+        # In lax/warn modes, share Variable instances across identical tokens
+        # so we save the per-occurrence Variable allocation. Strict modes
+        # bypass for the same reason Variable's vp_cache does.
+        error_mode = parse_context.error_mode
+        lax = error_mode != :strict && error_mode != :strict2 && error_mode != :rigid
+        if lax
+          vi_cache = parse_context.environment.variable_instance_cache
+          cached = vi_cache[token]
+          return cached if cached
+        end
+
         # Dedupe the inner-markup byteslice across identical tokens. The cache
         # lives on Environment instance state so it survives the eval harness's
         # clearable-pools walker.
         tm_cache = parse_context.environment.variable_token_markup_cache
         markup = tm_cache[token] ||= parse_context.cursor.parse_variable_token(token)
-        return Variable.new(markup, parse_context)
+        # Only cache instances whose parse was side-effect-free (fast path).
+        # The slow path can append to parse_context.warnings, and a cache hit
+        # would skip warning generation on subsequent identical markups.
+        warnings_before = lax ? parse_context.warnings.size : 0
+        v = Variable.new(markup, parse_context)
+        if lax && parse_context.warnings.size == warnings_before
+          vi_cache[token] = v
+        end
+        v
+      else
+        BlockBody.raise_missing_variable_terminator(token, parse_context)
       end
-
-      BlockBody.raise_missing_variable_terminator(token, parse_context)
     end
 
     # @deprecated Use {.raise_missing_tag_terminator} instead

@@ -59,6 +59,13 @@ module Liquid
     # without re-walking the markup.
     attr_reader :for_parse_cache
 
+    # Cache of Variable instances keyed by `{{ ... }}` token. In lax/warn modes
+    # the same markup yields a semantically identical Variable, so we share
+    # instances across templates. Render only reads @name and @filters, both
+    # immutable; @line_number and @parse_context become tied to the first parse,
+    # which is fine for rendering but means strict-mode tests must bypass this.
+    attr_reader :variable_instance_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -122,6 +129,7 @@ module Liquid
       @tag_token_parse_cache = {}
       @assign_parse_cache = {}
       @for_parse_cache = {}
+      @variable_instance_cache = {}
     end
 
     # Registers a new tag with the environment.
