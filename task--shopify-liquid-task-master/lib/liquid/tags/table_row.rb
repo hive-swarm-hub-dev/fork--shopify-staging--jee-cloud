@@ -122,7 +122,7 @@ module Liquid
             output << "</tr>\n<tr class=\"row#{tablerowloop.row + 1}\">"
           end
 
-          tablerowloop.send(:increment!)
+          tablerowloop.increment!
         end
       end
 

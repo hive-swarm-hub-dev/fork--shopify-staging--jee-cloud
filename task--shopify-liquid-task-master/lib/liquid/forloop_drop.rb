@@ -80,8 +80,8 @@ module Liquid
       @index == @length - 1
     end
 
-    protected
-
+    # @api private — promoted to public so the For tag can call it without
+    # going through #send on every iteration.
     def increment!
       @index += 1
     end

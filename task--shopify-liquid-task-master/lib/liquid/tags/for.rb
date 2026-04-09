@@ -207,7 +207,7 @@ module Liquid
           segment.each do |item|
             context[@variable_name] = item
             @for_block.render_to_output_buffer(context, output)
-            loop_vars.send(:increment!)
+            loop_vars.increment!
 
             # Handle any interrupts if they exist.
             next unless context.interrupt?

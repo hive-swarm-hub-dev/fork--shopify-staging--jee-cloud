@@ -105,8 +105,8 @@ module Liquid
       @col == @cols
     end
 
-    protected
-
+    # @api private — promoted to public so TableRow can call it without #send
+    # on every iteration.
     def increment!
       @index += 1
 
