@@ -451,6 +451,8 @@ module Liquid
         output << obj
       elsif obj.nil?
         # Do nothing
+      elsif obj.instance_of?(Integer)
+        output << ((obj >= 0 && obj < 1000) ? Liquid::Utils::SMALL_INT_STRINGS[obj] : obj.to_s)
       elsif obj.instance_of?(Array)
         obj.each do |o|
           render_obj_to_output(o, output)
