@@ -189,7 +189,10 @@ module Liquid
 
       begin
         # render the nodelist.
-        @root.render_to_output_buffer(context, output || +'')
+        # Pre-allocate the output buffer with capacity to skip the early
+        # exponential-growth reallocations during render. 4KiB covers most
+        # common Liquid templates without overshooting for tiny outputs.
+        @root.render_to_output_buffer(context, output || String.new(capacity: 4096))
       rescue Liquid::MemoryError => e
         context.handle_error(e)
       ensure
