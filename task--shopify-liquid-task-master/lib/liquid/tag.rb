@@ -23,10 +23,10 @@ module Liquid
             key = [self, markup]
             cached = cache[key]
             return cached if cached
-            warnings_before = parse_context.warnings.size
+            warnings_before = parse_context.warnings_count
             tag = new(tag_name, markup, parse_context)
             tag.parse(tokenizer)
-            cache[key] = tag if parse_context.warnings.size == warnings_before
+            cache[key] = tag if parse_context.warnings_count == warnings_before
             return tag
           end
         end

@@ -302,9 +302,9 @@ module Liquid
         # Only cache instances whose parse was side-effect-free (fast path).
         # The slow path can append to parse_context.warnings, and a cache hit
         # would skip warning generation on subsequent identical markups.
-        warnings_before = lax ? parse_context.warnings.size : 0
+        warnings_before = lax ? parse_context.warnings_count : 0
         v = Variable.new(markup, parse_context)
-        if lax && parse_context.warnings.size == warnings_before
+        if lax && parse_context.warnings_count == warnings_before
           vi_cache[token] = v
         end
         v

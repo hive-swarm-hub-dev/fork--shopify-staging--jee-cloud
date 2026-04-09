@@ -16,7 +16,11 @@ module Liquid
   #
   class Template
     attr_accessor :root, :name
-    attr_reader :resource_limits, :warnings
+    attr_reader :resource_limits
+
+    def warnings
+      @warnings || Const::EMPTY_ARRAY
+    end
 
     attr_reader :profiler
 
@@ -105,6 +109,7 @@ module Liquid
 
       tokenizer     = parse_context.new_tokenizer(source, start_line_number: @line_numbers && 1)
       @root         = Document.parse(tokenizer, parse_context)
+      @warnings     = parse_context.peek_warnings
       self
     end
 
@@ -229,7 +234,6 @@ module Liquid
         ParseContext.new(opts)
       end
 
-      @warnings = parse_context.warnings
       parse_context
     end
 

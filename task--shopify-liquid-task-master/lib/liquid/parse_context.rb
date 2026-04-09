@@ -3,14 +3,32 @@
 module Liquid
   class ParseContext
     attr_accessor :locale, :line_number, :trim_whitespace, :depth
-    attr_reader :partial, :warnings, :error_mode, :environment, :expression_cache, :string_scanner, :cursor
+    attr_reader :partial, :error_mode, :environment, :expression_cache, :string_scanner, :cursor
+
+    # Lazy-initialized warnings array. Most parses produce no warnings,
+    # so deferring the allocation saves ~1 Array per ParseContext (~60/eval).
+    def warnings
+      @warnings ||= []
+    end
+
+    # Fast read of warnings count without materializing the array.
+    def warnings_count
+      @warnings ? @warnings.size : 0
+    end
+
+    # Read @warnings without materializing — returns nil when no warnings
+    # have been recorded. Used by Template to copy state out without forcing
+    # lazy-init on the common no-warning path.
+    def peek_warnings
+      @warnings
+    end
 
     def initialize(options = Const::EMPTY_HASH)
       @environment = options.fetch(:environment, Environment.default)
       @template_options = options ? options.dup : {}
 
       @locale   = @template_options[:locale] ||= I18n.new
-      @warnings = []
+      @warnings = nil
 
       # constructing new StringScanner in Lexer, Tokenizer, etc is expensive
       # This StringScanner will be shared by all of them
