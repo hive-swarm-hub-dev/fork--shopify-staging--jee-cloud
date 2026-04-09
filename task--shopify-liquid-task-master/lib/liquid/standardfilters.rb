@@ -246,8 +246,20 @@ module Liquid
     #   the truncated string. The ellipsis is included in the character count of the truncated string.
     # @liquid_syntax string | truncate: number
     # @liquid_return [string]
-    def truncate(input, length = 50, truncate_string = "...")
+    def truncate(input, length = 50, truncate_string = DEFAULT_TRUNCATE_STRING)
       return if input.nil?
+
+      # Memoize truncate results — same template-rendered fields recur across
+      # templates within one cycle. Same Environment-instance trick as
+      # truncatewords. Only cached when called with the default truncate_string.
+      cache = nil
+      if input.is_a?(String) && truncate_string.equal?(DEFAULT_TRUNCATE_STRING)
+        cache = @context.environment.truncate_cache
+        if (inner = cache[input]) && (cached = inner[length])
+          return cached
+        end
+      end
+
       input_str = Utils.to_s(input)
       length    = Utils.to_integer(length)
 
@@ -256,7 +268,13 @@ module Liquid
       l = length - truncate_string_str.length
       l = 0 if l < 0
 
-      input_str.length > length ? input_str[0...l].concat(truncate_string_str) : input_str
+      result = input_str.length > length ? input_str[0...l].concat(truncate_string_str) : input_str
+
+      if cache && input.equal?(input_str)
+        (cache[input] ||= {})[length] = result
+      end
+
+      result
     end
 
     # @liquid_public_docs
@@ -863,7 +881,13 @@ module Liquid
       # Cache stable input/format pairs globally so repeated Time.parse/strftime
       # work can be skipped. Keep "now"/"today" uncached so the filter remains
       # time-sensitive.
-      normalized_input = input.downcase if input.is_a?(String)
+      # Only allocate a downcased copy when the input could plausibly be the
+      # special "now"/"today" keywords. Most date inputs are timestamps or
+      # formatted dates and the extra String#downcase allocation was wasted.
+      normalized_input = nil
+      if input.is_a?(String) && (input.bytesize == 3 || input.bytesize == 5)
+        normalized_input = input.downcase
+      end
 
       if normalized_input == 'now' || normalized_input == 'today'
         date = Utils.to_date(input)

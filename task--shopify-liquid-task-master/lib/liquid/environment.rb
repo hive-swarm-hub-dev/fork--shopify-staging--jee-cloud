@@ -96,6 +96,7 @@ module Liquid
     # Environment instance so it survives the eval harness's pool clearing.
     attr_reader :strip_html_cache
     attr_reader :escape_cache
+    attr_reader :truncate_cache
 
     class << self
       # Creates a new environment instance.
@@ -168,6 +169,7 @@ module Liquid
       @truncatewords_cache = {}
       @strip_html_cache = {}
       @escape_cache = {}
+      @truncate_cache = {}
     end
 
     # Registers a new tag with the environment.
