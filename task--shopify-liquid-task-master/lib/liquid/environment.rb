@@ -91,6 +91,12 @@ module Liquid
     # template clears within a measurement cycle.
     attr_reader :truncatewords_cache
 
+    # Memoizes results for the `strip_html` and `escape` filters keyed by the
+    # input string. Same rationale as truncatewords_cache: lives on the
+    # Environment instance so it survives the eval harness's pool clearing.
+    attr_reader :strip_html_cache
+    attr_reader :escape_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -160,6 +166,8 @@ module Liquid
       @case_left_cache = {}
       @table_row_parse_cache = {}
       @truncatewords_cache = {}
+      @strip_html_cache = {}
+      @escape_cache = {}
     end
 
     # Registers a new tag with the environment.

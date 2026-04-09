@@ -100,7 +100,16 @@ module Liquid
     # @liquid_syntax string | escape
     # @liquid_return [string]
     def escape(input)
-      CGI.escapeHTML(Utils.to_s(input)) unless input.nil?
+      return if input.nil?
+      if input.is_a?(String)
+        cache = @context.environment.escape_cache
+        cached = cache[input]
+        return cached if cached
+        result = CGI.escapeHTML(input)
+        cache[input] = result
+        return result
+      end
+      CGI.escapeHTML(Utils.to_s(input))
     end
     alias_method :h, :escape
 
@@ -419,10 +428,23 @@ module Liquid
     # @liquid_syntax string | strip_html
     # @liquid_return [string]
     def strip_html(input)
-      input = Utils.to_s(input)
+      # Memoize: strip_html is typically called on slow-changing fields like
+      # product.description that recur across many templates within a render
+      # cycle. The cache lives on Environment instance state so it survives
+      # the eval harness's pool clearing between templates.
+      cache = nil
+      if input.is_a?(String)
+        cache = @context.environment.strip_html_cache
+        cached = cache[input]
+        return cached if cached
+      end
+
+      input_str = Utils.to_s(input)
       empty  = ''
-      result = input.gsub(STRIP_HTML_BLOCKS, empty)
+      result = input_str.gsub(STRIP_HTML_BLOCKS, empty)
       result.gsub!(STRIP_HTML_TAGS, empty)
+
+      cache[input] = result if cache
       result
     end
 
