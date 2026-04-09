@@ -125,6 +125,11 @@ module Liquid
       coerce_to_liquid(strainer.invoke_two(method, input, arg1))
     end
 
+    # Fast path for three-argument filter invocation (e.g. {{ count | pluralize: 'item', 'items' }})
+    def invoke_three(method, input, arg1, arg2)
+      coerce_to_liquid(strainer.invoke_three(method, input, arg1, arg2))
+    end
+
     # Skip the .to_liquid method dispatch for primitive types whose to_liquid
     # implementation just returns self. Most filter results land here.
     def coerce_to_liquid(value)
