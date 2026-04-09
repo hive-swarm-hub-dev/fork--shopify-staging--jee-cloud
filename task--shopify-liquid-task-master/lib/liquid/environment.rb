@@ -32,6 +32,11 @@ module Liquid
     # environment, instead of starting empty for every new ParseContext.
     attr_reader :expression_cache
 
+    # Cache of `[name, filters]` tuples produced by Variable's fast parse path,
+    # keyed by raw markup. Lets repeated `{{ ... }}` markups across templates
+    # skip re-scanning the bytes of identifiers, filter names, and filter args.
+    attr_reader :variable_parse_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -90,6 +95,7 @@ module Liquid
       @default_resource_limits = Const::EMPTY_HASH
       @strainer_template_class_cache = {}
       @expression_cache = {}
+      @variable_parse_cache = {}
     end
 
     # Registers a new tag with the environment.

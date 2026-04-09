@@ -106,7 +106,24 @@ module Liquid
       # Skip for strict2/rigid modes which require different parsing
       # Fast path only for lax/warn modes — strict modes need full error checking
       error_mode = parse_context.error_mode
-      if error_mode == :strict2 || error_mode == :rigid || error_mode == :strict || !try_fast_parse(markup, parse_context)
+      if error_mode == :strict2 || error_mode == :rigid || error_mode == :strict
+        strict_parse_with_error_mode_fallback(markup)
+        return
+      end
+
+      # Markup-keyed cache of (name, filters) tuples produced by the fast path.
+      # The fast path is mode-independent and produces immutable values, so it's
+      # safe to share across Variable instances built from the same markup.
+      vp_cache = parse_context.environment.variable_parse_cache
+      if (cached = vp_cache[markup])
+        @name = cached[0]
+        @filters = cached[1]
+        return
+      end
+
+      if try_fast_parse(markup, parse_context)
+        vp_cache[markup] = [@name, @filters].freeze
+      else
         strict_parse_with_error_mode_fallback(markup)
       end
     end
