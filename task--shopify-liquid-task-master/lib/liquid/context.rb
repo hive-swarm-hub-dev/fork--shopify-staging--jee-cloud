@@ -111,19 +111,31 @@ module Liquid
     end
 
     def invoke(method, *args)
-      strainer.invoke(method, *args).to_liquid
+      coerce_to_liquid(strainer.invoke(method, *args))
     end
 
     # Fast path for single-argument filter invocation (the most common case:
     # {{ value | filter }}) — avoids *args splat allocation.
     def invoke_single(method, input)
-      strainer.invoke_single(method, input).to_liquid
+      coerce_to_liquid(strainer.invoke_single(method, input))
     end
 
     # Fast path for two-argument filter invocation (e.g. {{ value | default: 'x' }})
     def invoke_two(method, input, arg1)
-      strainer.invoke_two(method, input, arg1).to_liquid
+      coerce_to_liquid(strainer.invoke_two(method, input, arg1))
     end
+
+    # Skip the .to_liquid method dispatch for primitive types whose to_liquid
+    # implementation just returns self. Most filter results land here.
+    def coerce_to_liquid(value)
+      case value
+      when String, Integer, Float, NilClass, TrueClass, FalseClass, Array, Hash
+        value
+      else
+        value.to_liquid
+      end
+    end
+    private :coerce_to_liquid
 
     # Push new local scope on the stack. use <tt>Context#stack</tt> instead
     def push(new_scope = {})
