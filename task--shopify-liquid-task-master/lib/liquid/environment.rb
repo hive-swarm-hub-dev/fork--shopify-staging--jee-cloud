@@ -37,6 +37,16 @@ module Liquid
     # skip re-scanning the bytes of identifiers, filter names, and filter args.
     attr_reader :variable_parse_cache
 
+    # Cache mapping `{{ ... }}` token strings to their interior markup string,
+    # so that repeated identical tokens skip the byteslice in
+    # Cursor#parse_variable_token. Pairs with #variable_parse_cache.
+    attr_reader :variable_token_markup_cache
+
+    # Cache mapping `{% ... %}` token strings to a frozen
+    # `[tag_name, tag_markup, tag_newlines]` tuple, so that repeated identical
+    # tag tokens skip the byte walk in Cursor#parse_tag_token.
+    attr_reader :tag_token_parse_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -96,6 +106,8 @@ module Liquid
       @strainer_template_class_cache = {}
       @expression_cache = {}
       @variable_parse_cache = {}
+      @variable_token_markup_cache = {}
+      @tag_token_parse_cache = {}
     end
 
     # Registers a new tag with the environment.

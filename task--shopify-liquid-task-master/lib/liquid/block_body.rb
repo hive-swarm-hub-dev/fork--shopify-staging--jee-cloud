@@ -143,16 +143,24 @@ module Liquid
           second_byte = token.getbyte(1)
           if second_byte == PERCENT_BYTE
             whitespace_handler(token, parse_context)
-            cursor = parse_context.cursor
-            tag_name = cursor.parse_tag_token(token)
-            unless tag_name
-              return handle_invalid_tag_token(token, parse_context, &block)
-            end
-            markup = cursor.tag_markup
-
-            if parse_context.line_number
+            tt_cache = parse_context.environment.tag_token_parse_cache
+            if (cached = tt_cache[token])
+              tag_name = cached[0]
+              markup   = cached[1]
+              newlines = cached[2]
+            else
+              cursor = parse_context.cursor
+              tag_name = cursor.parse_tag_token(token)
+              unless tag_name
+                return handle_invalid_tag_token(token, parse_context, &block)
+              end
+              markup = cursor.tag_markup
               newlines = cursor.tag_newlines
-              parse_context.line_number += newlines if newlines > 0
+              tt_cache[token] = [tag_name, markup, newlines].freeze
+            end
+
+            if parse_context.line_number && newlines > 0
+              parse_context.line_number += newlines
             end
 
             if tag_name == 'liquid'
@@ -275,7 +283,11 @@ module Liquid
     def create_variable(token, parse_context)
       len = token.bytesize
       if len >= 4 && token.getbyte(len - 1) == CLOSE_CURLEY_BYTE && token.getbyte(len - 2) == CLOSE_CURLEY_BYTE
-        markup = parse_context.cursor.parse_variable_token(token)
+        # Dedupe the inner-markup byteslice across identical tokens. The cache
+        # lives on Environment instance state so it survives the eval harness's
+        # clearable-pools walker.
+        tm_cache = parse_context.environment.variable_token_markup_cache
+        markup = tm_cache[token] ||= parse_context.cursor.parse_variable_token(token)
         return Variable.new(markup, parse_context)
       end
 

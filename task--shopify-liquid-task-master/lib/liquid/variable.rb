@@ -122,6 +122,9 @@ module Liquid
       end
 
       if try_fast_parse(markup, parse_context)
+        # Only the fast path is side-effect-free — the lax/warn slow path can
+        # append to parse_context.warnings, and caching its result would skip
+        # warning generation on subsequent identical markups.
         vp_cache[markup] = [@name, @filters].freeze
       else
         strict_parse_with_error_mode_fallback(markup)
