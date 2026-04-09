@@ -71,7 +71,17 @@ module Liquid
       end
     end
 
-    # Cache for [filtername, EMPTY_ARRAY] tuples — avoids repeated array creation
+    # Pre-populated frozen cache of [filtername, EMPTY_ARRAY] tuples for every
+    # StandardFilters method. Frozen so it survives parser-cache clearing and
+    # is shared across all parses with zero per-call allocation.
+    NO_ARG_STD_FILTER_CACHE = StandardFilters.instance_methods(false).each_with_object({}) do |sym, h|
+      name = -sym.to_s
+      h[name] = [name, Const::EMPTY_ARRAY].freeze
+    end.freeze
+
+    # Fallback cache for non-StandardFilters (custom filters). Same shape as the
+    # original NO_ARG_FILTER_CACHE — caches the [name, EMPTY_ARRAY] tuple per
+    # filter name, amortizing allocation across repeated uses within a parse.
     NO_ARG_FILTER_CACHE = Hash.new { |h, k| h[k] = [k, Const::EMPTY_ARRAY].freeze }
 
     FilterMarkupRegex        = /#{FilterSeparator}\s*(.*)/om
@@ -294,7 +304,7 @@ module Liquid
           @filters << [filtername, filter_args]
         else
           # No args — add as simple filter
-          @filters << NO_ARG_FILTER_CACHE[filtername]
+          @filters << (NO_ARG_STD_FILTER_CACHE[filtername] || NO_ARG_FILTER_CACHE[filtername])
         end
 
         # Skip whitespace between filters
