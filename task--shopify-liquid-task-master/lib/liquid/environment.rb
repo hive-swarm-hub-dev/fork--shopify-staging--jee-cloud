@@ -71,6 +71,12 @@ module Liquid
     # and they can be shared across templates in lax/warn modes.
     attr_reader :nonblock_tag_instance_cache
 
+    # Cache for the parsed Condition components (left, op, right) of simple
+    # `{% if %}` / `{% unless %}` markups in lax/warn modes. The Condition itself
+    # has a mutable @attachment that gets bound to a per-template body, so we
+    # cache only the immutable components and recreate the wrapper each time.
+    attr_reader :simple_condition_cache
+
     class << self
       # Creates a new environment instance.
       #
@@ -136,6 +142,7 @@ module Liquid
       @for_parse_cache = {}
       @variable_instance_cache = {}
       @nonblock_tag_instance_cache = {}
+      @simple_condition_cache = {}
     end
 
     # Registers a new tag with the environment.

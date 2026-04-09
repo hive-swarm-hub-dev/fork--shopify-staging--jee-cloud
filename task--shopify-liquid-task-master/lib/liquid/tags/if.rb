@@ -89,9 +89,21 @@ module Liquid
     end
 
     def lax_parse(markup)
+      # Cache simple-condition parses across templates by markup string. The
+      # cached value is a frozen [left, op, right] tuple — we reconstruct the
+      # Condition wrapper per call because Condition.attachment is mutable and
+      # bound to a fresh per-template body.
+      cond_cache = @parse_context.environment.simple_condition_cache
+      cached = cond_cache[markup]
+      if cached
+        return Condition.new(cached[0], cached[1], cached[2])
+      end
+
       # Fastest path: simple identifier truthiness like "product.available" or "forloop.first"
       if (simple = Variable.simple_variable_markup(markup))
-        return Condition.new(parse_expression(simple))
+        left = parse_expression(simple)
+        cond_cache[markup] = [left, nil, nil].freeze
+        return Condition.new(left)
       end
 
       # Fast path: simple condition without and/or — use Cursor
@@ -99,11 +111,11 @@ module Liquid
         cursor = @parse_context.cursor
         cursor.reset(markup)
         if cursor.parse_simple_condition
-          return Condition.new(
-            parse_expression(cursor.cond_left),
-            cursor.cond_op,
-            cursor.cond_right ? parse_expression(cursor.cond_right) : nil,
-          )
+          left = parse_expression(cursor.cond_left)
+          op = cursor.cond_op
+          right = cursor.cond_right ? parse_expression(cursor.cond_right) : nil
+          cond_cache[markup] = [left, op, right].freeze
+          return Condition.new(left, op, right)
         end
       end
 
