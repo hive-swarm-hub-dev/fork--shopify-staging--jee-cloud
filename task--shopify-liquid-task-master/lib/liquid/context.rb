@@ -110,19 +110,28 @@ module Liquid
       exception_renderer.call(e).to_s
     end
 
+    PRIMITIVE_CLASSES = [String, Integer, Float, NilClass, TrueClass, FalseClass].freeze
+    private_constant :PRIMITIVE_CLASSES
+
     def invoke(method, *args)
-      strainer.invoke(method, *args).to_liquid
+      result = strainer.invoke(method, *args)
+      result.instance_of?(String) || result.instance_of?(Integer) || result.instance_of?(Float) ||
+        result.nil? || result.equal?(true) || result.equal?(false) ? result : result.to_liquid
     end
 
     # Fast path for single-argument filter invocation (the most common case:
     # {{ value | filter }}) — avoids *args splat allocation.
     def invoke_single(method, input)
-      strainer.invoke_single(method, input).to_liquid
+      result = strainer.invoke_single(method, input)
+      result.instance_of?(String) || result.instance_of?(Integer) || result.instance_of?(Float) ||
+        result.nil? || result.equal?(true) || result.equal?(false) ? result : result.to_liquid
     end
 
     # Fast path for two-argument filter invocation (e.g. {{ value | default: 'x' }})
     def invoke_two(method, input, arg1)
-      strainer.invoke_two(method, input, arg1).to_liquid
+      result = strainer.invoke_two(method, input, arg1)
+      result.instance_of?(String) || result.instance_of?(Integer) || result.instance_of?(Float) ||
+        result.nil? || result.equal?(true) || result.equal?(false) ? result : result.to_liquid
     end
 
     # Push new local scope on the stack. use <tt>Context#stack</tt> instead
@@ -204,7 +213,12 @@ module Liquid
     end
 
     def evaluate(object)
-      object.respond_to?(:evaluate) ? object.evaluate(self) : object
+      case object
+      when String, Integer, Float, NilClass, TrueClass, FalseClass, Array, Hash
+        object
+      else
+        object.respond_to?(:evaluate) ? object.evaluate(self) : object
+      end
     end
 
     # Fetches an object starting at the local scope and then moving up the hierachy
@@ -218,10 +232,20 @@ module Liquid
         variable = try_variable_find_in_environments(key, raise_on_not_found: raise_on_not_found)
       else
         # Multiple scopes — search through all of them
-        index = @scopes.find_index { |s| s.key?(key) }
+        index = nil
+        scopes = @scopes
+        i = 0
+        n = scopes.length
+        while i < n
+          if scopes.at(i).key?(key)
+            index = i
+            break
+          end
+          i += 1
+        end
 
         variable = if index
-          lookup_and_evaluate(@scopes[index], key, raise_on_not_found: raise_on_not_found)
+          lookup_and_evaluate(scopes.at(index), key, raise_on_not_found: raise_on_not_found)
         else
           try_variable_find_in_environments(key, raise_on_not_found: raise_on_not_found)
         end

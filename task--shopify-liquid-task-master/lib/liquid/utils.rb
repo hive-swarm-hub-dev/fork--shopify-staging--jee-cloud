@@ -89,6 +89,10 @@ module Liquid
     end
 
     def self.to_liquid_value(obj)
+      # Fast path: primitives never have to_liquid_value — skip respond_to? check
+      return obj if obj.instance_of?(String) || obj.instance_of?(Integer) || obj.instance_of?(Float) ||
+        obj.nil? || obj.equal?(true) || obj.equal?(false)
+
       # Enable "obj" to represent itself as a primitive value like integer, string, or boolean
       return obj.to_liquid_value if obj.respond_to?(:to_liquid_value)
 

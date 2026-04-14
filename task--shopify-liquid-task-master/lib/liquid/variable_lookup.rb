@@ -169,7 +169,8 @@ module Liquid
           object = context.lookup_and_evaluate(object, key)
           # Skip to_liquid for common primitive types (they return self)
           unless object.instance_of?(String) || object.instance_of?(Integer) || object.instance_of?(Float) ||
-              object.instance_of?(Array) || object.instance_of?(Hash) || object.nil?
+              object.instance_of?(Array) || object.instance_of?(Hash) || object.instance_of?(TrueClass) ||
+              object.instance_of?(FalseClass) || object.nil?
             object = object.to_liquid
             object.context = context if object.respond_to?(:context=)
           end
@@ -179,7 +180,9 @@ module Liquid
           # as commands and call them on the current object
         elsif lookup_command?(i) && object.respond_to?(key)
           object = object.send(key)
-          unless object.instance_of?(String) || object.instance_of?(Integer) || object.instance_of?(Array) || object.nil?
+          unless object.instance_of?(String) || object.instance_of?(Integer) || object.instance_of?(Float) ||
+              object.instance_of?(Array) || object.instance_of?(Hash) || object.instance_of?(TrueClass) ||
+              object.instance_of?(FalseClass) || object.nil?
             object = object.to_liquid
             object.context = context if object.respond_to?(:context=)
           end

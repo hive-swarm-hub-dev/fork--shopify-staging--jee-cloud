@@ -1121,7 +1121,11 @@ module Liquid
 
       def initialize(input, context)
         @context = context
-        @input   = if input.is_a?(Array)
+        @input   = if input.instance_of?(Array)
+          input.any?(Array) ? input.flatten : input
+        elsif input.instance_of?(Hash)
+          [input]
+        elsif input.is_a?(Array)
           input.flatten
         elsif input.is_a?(Hash)
           [input]
@@ -1173,8 +1177,11 @@ module Liquid
 
       def each
         @input.each do |e|
-          e = e.respond_to?(:to_liquid) ? e.to_liquid : e
-          e.context = @context if e.respond_to?(:context=)
+          unless e.instance_of?(String) || e.instance_of?(Integer) || e.instance_of?(Float) ||
+              e.nil? || e.equal?(true) || e.equal?(false) || e.instance_of?(Array) || e.instance_of?(Hash)
+            e = e.to_liquid
+            e.context = @context if e.respond_to?(:context=)
+          end
           yield(e)
         end
       end
